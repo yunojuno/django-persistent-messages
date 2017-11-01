@@ -1,2 +1,33 @@
-# django-persistent-messages
+# Persistent Messages-like Framework for Django
+
 Persisent, dismissable, targeted, messages framework for Django apps
+
+## Background
+
+Django messages are great for one-off notifications to users, but not for persistent notification banners. From the [official documentation](https://docs.djangoproject.com/en/1.11/ref/contrib/messages/) on the Django messages framework:
+
+> Quite commonly in web applications, you need to display a one-time notification message to the user after processing a form or some other types of user input. [...] The messages framework allows you to temporarily store messages in one request and retrieve them for display in a subsequent request (usually the next one).
+
+These one-time messages are usually dynamic, created within a view function, to alert the user to something that has just happened. This project is designed to extend the pattern to support configurable and persistent messages to users. The canonical use case for this is the EU Cookie warning. This appears to everyone (logged in or not) until the user explicitly dismiss it. It is not related to any specific action that the user has taken (beyond visiting the site for the first time), and it persists across all requests.
+
+## Requirements
+
+* Messages can be managed via the admin site
+* The message can contain HTML (specifically href links)
+* The message can be targeted to appear to the following groups:
+  * * All users (inc. anonymous)
+  * * Authenticated users only
+  * * Anonymous users only
+  * * Specific user groups only
+* The message can be marked as dismissable
+* The message can be enabled / disabled
+* The message can expire (do not show after {{datetime}})
+* Track dismissal of messages by authenticated users
+
+NB There is no requirement to use the Django messages framework.
+
+## Use cases
+
+* As the marketing team I would like to notify users of an event / activity
+* As the tech team I would like to alert users to platform maintenance
+* As the EU I would like to annoy people with a message about cookies
