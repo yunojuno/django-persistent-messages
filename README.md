@@ -22,7 +22,8 @@ These one-time messages are usually dynamic, created within a view function, to 
 * The message can be marked as dismissable
 * The message can be enabled / disabled
 * The message can expire (do not show after {{datetime}})
-* Track dismissal of messages by authenticated users
+* Track message views (yes/no)
+* Track message dismissals
 
 NB There is no requirement to use the Django messages framework.
 
