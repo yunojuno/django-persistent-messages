@@ -14,11 +14,12 @@ These one-time messages are usually dynamic, created within a view function, to 
 
 * Messages can be managed via the admin site
 * The message can contain HTML (specifically href links)
+* The message can be categorised (e.g. INFO | WARNING) 
 * The message can be targeted to appear to the following groups:
-  * * All users (inc. anonymous)
-  * * Authenticated users only
-  * * Anonymous users only
-  * * Specific user groups only
+  * All users (inc. anonymous)
+  * Authenticated users only
+  * Anonymous users only
+  * Specific user groups only
 * The message can be marked as dismissable
 * The message can be enabled / disabled
 * The message can expire (do not show after {{datetime}})
@@ -32,3 +33,37 @@ NB There is no requirement to use the Django messages framework.
 * As the marketing team I would like to notify users of an event / activity
 * As the tech team I would like to alert users to platform maintenance
 * As the EU I would like to annoy people with a message about cookies
+
+## Technical implementation
+
+1. Print out all messages targeted at a user
+
+```python
+# live == enabled, not expired, not-dismissed, targeted at user
+for m in PersistentMessage.objects.live(user):
+    print(m.message)
+```
+
+2. Display messages in a template using templatetag
+
+```html
+{% load persistent_message_tags %}
+...
+<body>
+ {% display_persistent_messages %}
+ ...
+</body>
+```
+
+3. Display messages in a template using template context
+
+```html
+{% load persistent_message_tags %}
+...
+<body>
+ {% for m in persistent_messages %}
+   <div class="{{m.category}}">{{ m.message }}</div>
+ {% endfor %}
+ ...
+</body>
+```
