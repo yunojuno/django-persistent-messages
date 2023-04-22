@@ -1,0 +1,10 @@
+*.pyc
+*.egg-info
+*.bak
+*.db
+.coverage
+.tox
+.venv
+node_modules
+poetry.lock
+test.db
