@@ -6,7 +6,7 @@ from django.contrib.auth.models import Group
 from django.db import models
 from django.utils.timezone import now as tz_now
 from django.utils.translation import gettext_lazy as _lazy
-
+from django.template.defaultfilters import truncatechars_html
 from .exceptions import UndismissableMessage
 
 # mapped from django.contrib.messages
@@ -78,9 +78,9 @@ class PersistentMessage(models.Model):
     """
     Wrap the Django message framework with some storage.
 
-    Enables adding a message to the system which is repeatedly/persistently
-    shown to all or certain users, unless they've had the opportunity to dismiss
-    it.
+    Enables adding a message to the system which is repeatedly /
+    persistently shown to all or certain users, unless they've had the
+    opportunity to dismiss it.
 
     """
 
@@ -136,20 +136,36 @@ class PersistentMessage(models.Model):
     )
     dismissed_by = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        related_name="dismissed_persistent_messages",
-        blank=True,
+        through="MessageDismissal",
         help_text=_lazy("Users who have dismissed this message."),
+    )
+    additional_extra_tags = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=_lazy(
+            "Space-separated tags to add to the default extra tags "
+            "('persistent', 'dismissable')."
+        ),
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     objects = PersistentQuerySet.as_manager()
 
+    def __str__(self) -> str:
+        return f'"{truncatechars_html(self.content, 50)}"'
+
     @property
     def is_active(self) -> bool:
         if self.display_until:
             return self.display_from < tz_now() < self.display_until
         return self.display_from < tz_now()
+
+    @property
+    def default_extra_tags(self) -> str:
+        if self.is_dismissable:
+            return "persistent dismissable"
+        return "persistent"
 
     @property
     def extra_tags(self) -> str:
@@ -161,9 +177,7 @@ class PersistentMessage(models.Model):
         "persistent", and "dismissable" if the message is dismissable.
 
         """
-        if self.is_dismissable:
-            return "persistent dismissable"
-        return "persistent"
+        return " ".join([self.default_extra_tags, self.additional_extra_tags])
 
     def dismiss(self, user: settings.AUTH_USER_MODEL) -> None:
         """
@@ -172,9 +186,9 @@ class PersistentMessage(models.Model):
         If the message is not dismissable, raises an exception.
 
         """
-        if self.is_dismissable:
-            self.dismissed_by.add(user)
-        raise UndismissableMessage
+        if not self.is_dismissable:
+            raise UndismissableMessage
+        self.dismissed_by.add(user)
 
     def deactivate(self) -> None:
         """Deactivate by setting the display_until property to now."""
@@ -185,3 +199,20 @@ class PersistentMessage(models.Model):
         """Deactivate by setting the display_until property to null."""
         self.display_until = None
         self.save()
+
+
+class MessageDismissal(models.Model):
+    """Through table for user dismissals of messages."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="dismissed_messages",
+    )
+    message = models.ForeignKey(
+        PersistentMessage, on_delete=models.CASCADE, related_name="message_dismissals"
+    )
+    dismissed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "message")
