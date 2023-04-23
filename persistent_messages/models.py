@@ -2,30 +2,76 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.models import AbstractBaseUser, Group
+from django.contrib.auth.models import Group
 from django.db import models
 from django.utils.timezone import now as tz_now
 from django.utils.translation import gettext_lazy as _lazy
+
+from .exceptions import UndismissableMessage
 
 # mapped from django.contrib.messages
 MESSAGE_LEVEL_CHOICES = [(v, k) for k, v in messages.DEFAULT_LEVELS.items()]
 
 
 class PersistentQuerySet(models.QuerySet):
-    def filter_user(self, user: AbstractBaseUser) -> models.QuerySet[PersistentMessage]:
+    def active(self) -> models.QuerySet[PersistentMessage]:
+        """Filter messages to those that are currently active (based on dates)."""
+        return self.filter(
+            display_from__lte=tz_now(),
+            display_until__gte=tz_now(),
+        )
+
+    def filter_user(
+        self, user: settings.AUTH_USER_MODEL
+    ) -> models.QuerySet[PersistentMessage]:
         """
         Filter messages to those which should be shown to the given user.
 
-        This is a combination messages that are "all users" and messages that
-        are targeted at the given user, or any group the user is a member of.
+        This is a combination messages that are "all users" and messages
+        that are targeted at the given user, or any group the user is a
+        member of.
+
+        NB There is a built-in assumption in this method that there will
+        never be a large number of undismissed messages for a given
+        user, and so iterating through them is not a problem.
 
         """
         if user.is_anonymous:
             return self.filter(message_target=PersistentMessage.TargetType.ALL_USERS)
-        # exclude messages that the user has already dismissed.
-        qs = self.exclude(dismissed_by=user)
-        # exclude any messages are targeted
-        return self.get_queryset().filter_user()
+
+        # If the user is authenticated then we build up the message filter using
+        # the following logic: all messages that are targeted at all users, or
+        # all authenticated users apply; messaages that are targeted at specific
+        # users or groups apply if the user is in the target list;
+
+        # filter on ALL_USERS messages as they are global
+        all_filter = models.Q(message_target=PersistentMessage.TargetType.ALL_USERS)
+
+        # filter on AUTHENTICATED_ONLY messages as we know the user is authenticated
+        auth_filter = models.Q(
+            message_target=PersistentMessage.TargetType.AUTHENTICATED_ONLY
+        )
+
+        # filter on messages targeted at the user
+        user_filter = models.Q(
+            message_target=PersistentMessage.TargetType.USERS_OR_GROUPS,
+            target_users=user,
+        )
+
+        # filter on messages targeted at the user via a group they belong to.
+        # NB even though we are using another queryset in this filter, it's
+        # evaluated on the fly as part of the overall query - we don't do
+        # any extra queries here.
+        group_filter = models.Q(
+            message_target=PersistentMessage.TargetType.USERS_OR_GROUPS,
+            target_groups__in=user.groups.all(),
+        )
+
+        # combine the filters together as an OR
+        or_filter = all_filter | auth_filter | user_filter | group_filter
+
+        # finally, exclude messages that have been dismissed by the user
+        return self.exclude(dismissed_by=user).filter(or_filter)
 
 
 class PersistentMessage(models.Model):
@@ -96,3 +142,30 @@ class PersistentMessage(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = PersistentQuerySet.as_manager()
+
+    @property
+    def extra_tags(self) -> str:
+        """
+        Return the extra tags for this message.
+
+        These tags are added to the message in the message store, so that
+        they can be used in the output. Every messages gets a default tag
+        "persistent", and "dismissable" if the message is dismissable.
+
+        """
+        if self.is_dismissable:
+            return "persistent dismissable"
+        return "persistent"
+
+    def dismiss(self, user: settings.AUTH_USER_MODEL) -> None:
+        """
+        Dismiss this message for the given user.
+
+        If the message is not dismissable, raises an exception.
+
+        """
+        if self.is_dismissable:
+            self.dismissed_by.add(user)
+        raise UndismissableMessage

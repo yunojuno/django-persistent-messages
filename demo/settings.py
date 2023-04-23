@@ -4,6 +4,7 @@ DEBUG = True
 TEMPLATE_DEBUG = True
 USE_TZ = True
 USE_L10N = True
+TIME_ZONE = "UTC"
 
 DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": "demo.db"}}
 
