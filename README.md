@@ -1,81 +1,66 @@
-# Poetry Template
+# Persistent Messages-like Framework for Django
 
-Django app template, using `poetry-python` as dependency manager.
+Persisent, dismissable, targeted, messages framework for Django apps
 
-This project is a template that can be cloned and re-used for redistributable apps.
+## STATUS
 
-It includes the following:
+Alpha - pls do not use. This README is six years old.
 
--   `poetry` for dependency management
--   `ruff`, `black` for linting / format
--   `pre-commit` to run linting
--   `mypy` for type checking
--   `tox` and Github Actions for builds and CI
+## Background
 
-There are default config files for the linting and mypy.
+Django messages are great for one-off notifications to users, but not for persistent notification
+banners. From the
+[official documentation](https://docs.djangoproject.com/en/1.11/ref/contrib/messages/) on the Django
+messages framework:
 
-## Principles
+> Quite commonly in web applications, you need to display a one-time notification message to the
+> user after processing a form or some other types of user input. [...] The messages framework
+> allows you to temporarily store messages in one request and retrieve them for display in a
+> subsequent request (usually the next one).
 
-The motivation for this project is to provide a consistent set of standards across all YunoJuno
-public Python/Django projects. The principles we want to encourage are:
+These one-time messages are usually dynamic, created within a view function, to alert the user to
+something that has just happened. This project is designed to extend the pattern to support
+configurable and persistent messages to users. The canonical use case for this is the EU Cookie
+warning. This appears to everyone (logged in or not) until the user explicitly dismiss it. It is not
+related to any specific action that the user has taken (beyond visiting the site for the first
+time), and it persists across all requests.
 
--   Simple for developers to get up-and-running
--   Consistent style (`black`, `ruff`)
--   Full type hinting (`mypy`)
+## Requirements
 
-## Versioning
+-   Messages can be managed via the admin site
+-   The message can contain HTML (specifically href links)
+-   The message can be categorised (e.g. INFO | WARNING)
+-   The message can be targeted to appear to the following groups:
+    -   All users (inc. anonymous)
+    -   Authenticated users only
+    -   Specific user groups only
+-   The message can be marked as dismissable
+-   The message can be enabled / disabled
+-   The message can expire (do not show after {{datetime}})
+-   Track message dismissals
 
-We currently support Python 3.7+, and Django 3.2+. We will aggressively upgrade Django versions, and
-we won't introduce hacks to support breaking changes - if Django 4 introduces something that 2.2
-doesn't support we'll drop it.
+## Use cases
 
-## Tests
+-   As the marketing team I would like to notify users of an event / activity
+-   As the tech team I would like to alert users to platform maintenance
+-   As the EU I would like to annoy people with a message about cookies
 
-#### Tests package
+## Technical implementation
 
-The package tests themselves are _outside_ of the main library code, in a package that is itself a
-Django app (it contains `models`, `settings`, and any other artifacts required to run the tests
-(e.g. `urls`).) Where appropriate, this test app may be runnable as a Django project - so that
-developers can spin up the test app and see what admin screens look like, test migrations, etc.
+1. Print out all messages targeted at a user
 
-#### Running tests
-
-The tests themselves use `pytest` as the test runner. If you have installed the `poetry` evironment,
-you can run them thus:
-
-```
-$ poetry run pytest
-```
-
-or
-
-```
-$ poetry shell
-(persistent_messages) $ pytest
-```
-
-The full suite is controlled by `tox`, which contains a set of environments that will format, lint,
-and test against all support Python + Django version combinations.
-
-```
-$ tox
-...
-______________________ summary __________________________
-  fmt: commands succeeded
-  lint: commands succeeded
-  mypy: commands succeeded
-  py37-django22: commands succeeded
-  py37-django32: commands succeeded
-  py37-djangomain: commands succeeded
-  py38-django22: commands succeeded
-  py38-django32: commands succeeded
-  py38-djangomain: commands succeeded
-  py39-django22: commands succeeded
-  py39-django32: commands succeeded
-  py39-djangomain: commands succeeded
+```python
+# live == enabled, not expired, not-dismissed, targeted at user
+for m in PersistentMessage.objects.for_user(user).active():
+    print(m.message)
 ```
 
-#### CI
+2. Display messages in a template using template context
 
-There is a `.github/workflows/tox.yml` file that can be used as a baseline to run all of the tests
-on Github. This file runs the oldest (2.2), newest (3.2), and head of the main Django branch.
+```html
+<body>
+    {% for m in persistent_messages %}
+    <div class="{{m.extra_tags}}">{{ m.message }}</div>
+    {% endfor %} ...
+</body>
+```
