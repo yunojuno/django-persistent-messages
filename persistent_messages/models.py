@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import AnonymousUser, Group
 from django.db import models
+from django.template.defaultfilters import truncatechars_html
+from django.utils.safestring import mark_safe
 from django.utils.timezone import now as tz_now
 from django.utils.translation import gettext_lazy as _lazy
-from django.template.defaultfilters import truncatechars_html
+
 from .exceptions import UndismissableMessage
 
 # mapped from django.contrib.messages
@@ -22,7 +24,7 @@ class PersistentQuerySet(models.QuerySet):
         )
 
     def filter_user(
-        self, user: settings.AUTH_USER_MODEL
+        self, user: settings.AUTH_USER_MODEL | AnonymousUser
     ) -> models.QuerySet[PersistentMessage]:
         """
         Filter messages to those which should be shown to the given user.
@@ -179,6 +181,13 @@ class PersistentMessage(models.Model):
         """
         return " ".join([self.default_extra_tags, self.additional_extra_tags])
 
+    @property
+    def message(self) -> str:
+        """Return the message content, with HTML escaped if required."""
+        if self.mark_content_safe:
+            return mark_safe(self.content)  # noqa: S308
+        return self.content
+
     def dismiss(self, user: settings.AUTH_USER_MODEL) -> None:
         """
         Dismiss this message for the given user.
@@ -210,9 +219,24 @@ class MessageDismissal(models.Model):
         related_name="dismissed_messages",
     )
     message = models.ForeignKey(
-        PersistentMessage, on_delete=models.CASCADE, related_name="message_dismissals"
+        PersistentMessage,
+        on_delete=models.CASCADE,
+        related_name="message_dismissals",
     )
     dismissed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ("user", "message")
+
+
+def get_user_messages(
+    user: settings.AUTH_USER_MODEL | AnonymousUser,
+) -> models.QuerySet[PersistentMessage]:
+    """
+    Return the messages for the given user.
+
+    If the user is not authenticated, only messages targeted at all users
+    will be returned.
+
+    """
+    return PersistentMessage.objects.filter_user(user).active()

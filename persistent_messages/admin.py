@@ -3,7 +3,7 @@ from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.safestring import mark_safe
 
-from .models import PersistentMessage, MessageDismissal
+from .models import MessageDismissal, PersistentMessage
 
 
 @admin.register(PersistentMessage)
@@ -19,6 +19,7 @@ class PersistentMessageAdmin(admin.ModelAdmin):
     readonly_fields = (
         "default_extra_tags",
         "_extra_tags",
+        "message",
         "_dissmissed_by_count",
         "created_at",
         "updated_at",

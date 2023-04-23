@@ -20,6 +20,7 @@ select = [
     "C9",
     "D",
     "E",
+    "I",  # isort
     "F",
     "S",
     "W",
