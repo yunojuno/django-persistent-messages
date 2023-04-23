@@ -146,6 +146,12 @@ class PersistentMessage(models.Model):
     objects = PersistentQuerySet.as_manager()
 
     @property
+    def is_active(self) -> bool:
+        if self.display_until:
+            return self.display_from < tz_now() < self.display_until
+        return self.display_from < tz_now()
+
+    @property
     def extra_tags(self) -> str:
         """
         Return the extra tags for this message.
@@ -169,3 +175,13 @@ class PersistentMessage(models.Model):
         if self.is_dismissable:
             self.dismissed_by.add(user)
         raise UndismissableMessage
+
+    def deactivate(self) -> None:
+        """Deactivate by setting the display_until property to now."""
+        self.display_until = tz_now()
+        self.save()
+
+    def reactivate(self) -> None:
+        """Deactivate by setting the display_until property to null."""
+        self.display_until = None
+        self.save()
