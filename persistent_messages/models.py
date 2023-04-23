@@ -161,8 +161,8 @@ class PersistentMessage(models.Model):
     @property
     def is_active(self) -> bool:
         if self.display_until:
-            return self.display_from < tz_now() < self.display_until
-        return self.display_from < tz_now()
+            return self.display_from <= tz_now() < self.display_until
+        return self.display_from <= tz_now()
 
     @property
     def level(self) -> int:
@@ -173,7 +173,7 @@ class PersistentMessage(models.Model):
     def default_extra_tags(self) -> str:
         if self.is_dismissable:
             return "persistent dismissable"
-        return "persistent"
+        return "persistent undismissable"
 
     @property
     def extra_tags(self) -> str:
@@ -185,7 +185,7 @@ class PersistentMessage(models.Model):
         "persistent", and "dismissable" if the message is dismissable.
 
         """
-        return " ".join([self.default_extra_tags, self.additional_extra_tags])
+        return " ".join([self.default_extra_tags, self.additional_extra_tags]).strip()
 
     @property
     def message(self) -> str:
@@ -201,6 +201,8 @@ class PersistentMessage(models.Model):
         If the message is not dismissable, raises an exception.
 
         """
+        if user.is_anonymous:
+            return
         if not self.is_dismissable:
             raise UndismissableMessage
         self.dismissed_by.add(user)

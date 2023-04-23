@@ -1,7 +1,9 @@
 import logging
 
+from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_GET
 
 from .exceptions import PersistentMessageException
 from .models import PersistentMessage
@@ -9,6 +11,8 @@ from .models import PersistentMessage
 logger = logging.getLogger(__name__)
 
 
+@require_GET
+@login_required  # anonymous users can't dismiss messages
 def dismiss_message(request: HttpRequest, message_id: int) -> HttpResponse:
     """
     Dismiss a message for the current user.
