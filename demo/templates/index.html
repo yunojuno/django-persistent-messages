@@ -1,0 +1,16 @@
+<html>
+    <head>
+        <title>My Template</title>
+    </head>
+    <body>
+        <section id="messages">
+            {% for message in messages %}
+            <div class="message {{ message.extra_tags }}">
+                <p>{{ message.message }}</p>
+            </div>
+            {% endfor %}
+        </section>
+        <h1>My Template</h1>
+        <p>My template is a template.</p>
+    </body>
+</html>

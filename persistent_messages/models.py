@@ -18,10 +18,11 @@ MESSAGE_LEVEL_CHOICES = [(v, k) for k, v in messages.DEFAULT_LEVELS.items()]
 class PersistentQuerySet(models.QuerySet):
     def active(self) -> models.QuerySet[PersistentMessage]:
         """Filter messages to those that are currently active (based on dates)."""
-        return self.filter(
-            display_from__lte=tz_now(),
-            display_until__gte=tz_now(),
+        start_date_filter = models.Q(display_from__lte=tz_now())
+        end_date_filter = models.Q(display_until__gte=tz_now()) | models.Q(
+            display_until__isnull=True
         )
+        return self.filter(start_date_filter).filter(end_date_filter)
 
     def filter_user(
         self, user: settings.AUTH_USER_MODEL | AnonymousUser
@@ -162,6 +163,11 @@ class PersistentMessage(models.Model):
         if self.display_until:
             return self.display_from < tz_now() < self.display_until
         return self.display_from < tz_now()
+
+    @property
+    def level(self) -> int:
+        """Return message_level - aligns property name with contrib.messages."""
+        return self.message_level
 
     @property
     def default_extra_tags(self) -> str:
