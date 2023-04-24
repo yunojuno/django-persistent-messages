@@ -9,6 +9,7 @@ def persistent_messages(request: HttpRequest) -> dict[str, list[dict[str, str]]]
         "persistent_messages": [
             {
                 "level": pm.level,
+                "level_tag": pm.level_tag,
                 "message": pm.message,
                 "extra_tags": pm.extra_tags,
             }

@@ -1,0 +1,8 @@
+<html>
+    <head></head>
+    <body>
+        {% for message in messages %}
+        <div class="{{ message.tags }}">{{ message.message }}</div>
+        {% endfor %}
+    </body>
+</html>

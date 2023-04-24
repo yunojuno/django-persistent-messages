@@ -11,6 +11,8 @@ from django.utils.translation import gettext_lazy as _lazy
 
 from .exceptions import UndismissableMessage
 
+LEVEL_TAGS = messages.utils.get_level_tags()
+
 
 class PersistentMessageQuerySet(models.QuerySet):
     def active(self) -> models.QuerySet[PersistentMessage]:
@@ -159,6 +161,10 @@ class PersistentMessage(models.Model):
         return f'"{truncatechars_html(self.content, 50)}"'
 
     @property
+    def level_tag(self) -> str:
+        return LEVEL_TAGS.get(self.level, "")
+
+    @property
     def is_active(self) -> bool:
         if self.display_until:
             return self.display_from <= tz_now() < self.display_until
@@ -169,15 +175,16 @@ class PersistentMessage(models.Model):
         """Return the tag derived from the message ('safe', 'persistent', etc.)."""
         tags = ["persistent"]
         tags.append("dismissable" if self.is_dismissable else "undismissable")
-        if self.mark_content_safe:
-            tags.append("safe")
-        return " ".join(set(tags)).strip()
+        tags.append("safe" if self.mark_content_safe else "unsafe")
+        return " ".join(tags)
 
     @property
     def extra_tags(self) -> str:
         """Return custom_extra_tags, default_extra_tags combined."""
-        all_tags = f"{self.default_extra_tags} {self.custom_extra_tags}"
-        return " ".join(set(all_tags.strip().split(" ")))
+        all_tags = dict.fromkeys(
+            self.default_extra_tags.split() + self.custom_extra_tags.strip().split()
+        )
+        return " ".join(all_tags.keys())
 
     @property
     def message(self) -> str:

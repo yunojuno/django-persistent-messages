@@ -1,10 +1,7 @@
-from django.contrib import admin
 from django.urls import path
-from django.views import debug
 
-admin.autodiscover()
+from . import views
 
 urlpatterns = [
-    path("", debug.default_urlconf),
-    path("admin/", admin.site.urls),
+    path("<int:status_code>", views.custom_response, name="custom-response"),
 ]

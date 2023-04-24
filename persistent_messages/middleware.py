@@ -15,11 +15,8 @@ class PersistentMessageMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        response = self.get_response(request)
-        # Only add messages if the response is successful.
-        if 200 <= response.status_code < 300:
-            self.add_messages(request)
-        return response
+        self.add_messages(request)
+        return self.get_response(request)
 
     def add_messages(self, request: HttpRequest) -> None:
         existing_messages = get_messages(request)
