@@ -10,7 +10,7 @@ homepage = "https://github.com/yunojuno/django-persistent-messages"
 repository = "https://github.com/yunojuno/django-persistent-messages"
 documentation = "https://github.com/yunojuno/django-persistent-messages"
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Environment :: Web Environment",
     "Framework :: Django",
     "Framework :: Django :: 3.2",
@@ -31,7 +31,7 @@ packages = [{ include = "persistent_messages" }]
 python = "^3.8"
 django = "^3.2 || ^4.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 black = "*"
 coverage = "*"
 freezegun = "*"
