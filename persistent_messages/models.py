@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser, Group
+from django.contrib.messages.utils import get_level_tags
 from django.db import models
 from django.template.defaultfilters import truncatechars_html
 from django.utils.safestring import mark_safe
@@ -11,7 +12,8 @@ from django.utils.translation import gettext_lazy as _lazy
 
 from .exceptions import UndismissableMessage
 
-LEVEL_TAGS = messages.utils.get_level_tags()
+# use the contrib func as it pulls in settings overrides
+LEVEL_TAGS = get_level_tags()
 
 
 class PersistentMessageQuerySet(models.QuerySet):
