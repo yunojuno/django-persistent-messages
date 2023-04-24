@@ -10,19 +10,18 @@ class TestPersistentMessage:
     def test_defaults(self) -> None:
         pm = PersistentMessage()
         assert pm.is_active
-        assert pm.level == pm.message_level == message_constants.INFO
+        assert pm.level == message_constants.INFO
         assert pm.is_dismissable
-        assert pm.default_extra_tags == "persistent dismissable"
-        assert pm.additional_extra_tags == ""
-        assert pm.extra_tags == "persistent dismissable"
-        assert pm.additional_extra_tags == ""
+        assert pm.custom_extra_tags == ""
+        assert set(pm.default_extra_tags) == set("persistent dismissable")
+        assert set(pm.extra_tags) == set("persistent dismissable")
         assert pm.message == pm.content
         assert pm.display_from is not None
         assert pm.display_until is None
-        assert pm.message_target == pm.TargetType.AUTHENTICATED_ONLY
+        assert pm.target == pm.TargetType.AUTHENTICATED_ONLY
 
     @pytest.mark.parametrize(
-        "is_dismissable, additional_extra_tags, extra_tags",
+        "is_dismissable, custom_extra_tags, extra_tags",
         [
             (True, "", "persistent dismissable"),
             (False, "", "persistent undismissable"),
@@ -30,11 +29,11 @@ class TestPersistentMessage:
         ],
     )
     def test_extra_tags(
-        self, is_dismissable: bool, additional_extra_tags: str, extra_tags: str
+        self, is_dismissable: bool, custom_extra_tags: str, extra_tags: str
     ) -> None:
         pm = PersistentMessage(
             is_dismissable=is_dismissable,
-            additional_extra_tags=additional_extra_tags,
+            custom_extra_tags=custom_extra_tags,
         )
         assert pm.extra_tags == extra_tags
 

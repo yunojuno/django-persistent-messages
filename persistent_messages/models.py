@@ -11,9 +11,6 @@ from django.utils.translation import gettext_lazy as _lazy
 
 from .exceptions import UndismissableMessage
 
-# mapped from django.contrib.messages
-MESSAGE_LEVEL_CHOICES = [(v, k) for k, v in messages.DEFAULT_LEVELS.items()]
-
 
 class PersistentMessageQuerySet(models.QuerySet):
     def active(self) -> models.QuerySet[PersistentMessage]:
@@ -40,7 +37,7 @@ class PersistentMessageQuerySet(models.QuerySet):
 
         """
         if user.is_anonymous:
-            return self.filter(message_target=PersistentMessage.TargetType.ALL_USERS)
+            return self.filter(target=PersistentMessage.TargetType.ALL_USERS)
 
         # If the user is authenticated then we build up the message filter using
         # the following logic: all messages that are targeted at all users, or
@@ -48,16 +45,14 @@ class PersistentMessageQuerySet(models.QuerySet):
         # users or groups apply if the user is in the target list;
 
         # filter on ALL_USERS messages as they are global
-        all_filter = models.Q(message_target=PersistentMessage.TargetType.ALL_USERS)
+        all_filter = models.Q(target=PersistentMessage.TargetType.ALL_USERS)
 
         # filter on AUTHENTICATED_ONLY messages as we know the user is authenticated
-        auth_filter = models.Q(
-            message_target=PersistentMessage.TargetType.AUTHENTICATED_ONLY
-        )
+        auth_filter = models.Q(target=PersistentMessage.TargetType.AUTHENTICATED_ONLY)
 
         # filter on messages targeted at the user
         user_filter = models.Q(
-            message_target=PersistentMessage.TargetType.USERS_OR_GROUPS,
+            target=PersistentMessage.TargetType.USERS_OR_GROUPS,
             target_users=user,
         )
 
@@ -66,7 +61,7 @@ class PersistentMessageQuerySet(models.QuerySet):
         # evaluated on the fly as part of the overall query - we don't do
         # any extra queries here.
         group_filter = models.Q(
-            message_target=PersistentMessage.TargetType.USERS_OR_GROUPS,
+            target=PersistentMessage.TargetType.USERS_OR_GROUPS,
             target_groups__in=user.groups.all(),
         )
 
@@ -87,6 +82,11 @@ class PersistentMessage(models.Model):
 
     """
 
+    # piggy-back on the message framework's levels
+    LEVEL_TAGS = messages.utils.get_level_tags()
+    # convert to a list of tuples for use in a model field
+    LEVEL_TAG_CHOICES = [(k, v) for k, v in LEVEL_TAGS.items()]
+
     class TargetType(models.TextChoices):
         ALL_USERS = "ALL_USERS", "All users, even logged out"
         AUTHENTICATED_ONLY = "AUTHENTICATED_USERS", "All logged-in users"
@@ -98,20 +98,20 @@ class PersistentMessage(models.Model):
         default=False,
         help_text=_lazy("Explicitly allow JS and/or HTML in this message."),
     )
-    message_level = models.IntegerField(
+    level = models.IntegerField(
         default=messages.INFO,
-        choices=MESSAGE_LEVEL_CHOICES,
+        choices=LEVEL_TAG_CHOICES,
         help_text=_lazy(
             "The level of the message, mapped from django.contrib.messages.constants."
         ),
     )
-    message_target = models.CharField(
+    target = models.CharField(
         choices=TargetType.choices, default=TargetType.AUTHENTICATED_ONLY, max_length=50
     )
     target_users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         help_text=_lazy(
-            "Specific users to target - used when message_target is USERS_OR_GROUPS"
+            "Specific users to target - used when target is USERS_OR_GROUPS"
         ),
         related_name="persistent_messages",
         blank=True,
@@ -119,7 +119,7 @@ class PersistentMessage(models.Model):
     target_groups = models.ManyToManyField(
         Group,
         help_text=_lazy(
-            "Specific groups to target - used when message_target is USERS_OR_GROUPS"
+            "Specific groups to target - used when target is USERS_OR_GROUPS"
         ),
         related_name="persistent_messages",
         blank=True,
@@ -142,12 +142,12 @@ class PersistentMessage(models.Model):
         through="MessageDismissal",
         help_text=_lazy("Users who have dismissed this message."),
     )
-    additional_extra_tags = models.CharField(
+    custom_extra_tags = models.CharField(
         max_length=100,
         blank=True,
         help_text=_lazy(
-            "Space-separated tags to add to the default extra tags "
-            "('persistent', 'dismissable')."
+            "User-defined tags that are combined with the default_tags and "
+            "passed to messages framework as extra_tags."
         ),
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -165,27 +165,19 @@ class PersistentMessage(models.Model):
         return self.display_from <= tz_now()
 
     @property
-    def level(self) -> int:
-        """Return message_level - aligns property name with contrib.messages."""
-        return self.message_level
-
-    @property
     def default_extra_tags(self) -> str:
-        if self.is_dismissable:
-            return "persistent dismissable"
-        return "persistent undismissable"
+        """Return the tag derived from the message ('safe', 'persistent', etc.)."""
+        tags = ["persistent"]
+        tags.append("dismissable" if self.is_dismissable else "undismissable")
+        if self.mark_content_safe:
+            tags.append("safe")
+        return " ".join(set(tags)).strip()
 
     @property
     def extra_tags(self) -> str:
-        """
-        Return the extra tags for this message.
-
-        These tags are added to the message in the message store, so that
-        they can be used in the output. Every messages gets a default tag
-        "persistent", and "dismissable" if the message is dismissable.
-
-        """
-        return " ".join([self.default_extra_tags, self.additional_extra_tags]).strip()
+        """Return custom_extra_tags, default_extra_tags combined."""
+        all_tags = f"{self.default_extra_tags} {self.custom_extra_tags}"
+        return " ".join(set(all_tags.strip().split(" ")))
 
     @property
     def message(self) -> str:

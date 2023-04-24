@@ -10,14 +10,14 @@ from .models import MessageDismissal, PersistentMessage
 class PersistentMessageAdmin(admin.ModelAdmin):
     list_display = (
         "content",
-        "message_target",
+        "target",
         "display_from",
         "display_until",
         "_is_active",
     )
     raw_id_fields = ("target_users", "target_groups", "dismissed_by")
     readonly_fields = (
-        "default_extra_tags",
+        "_default_extra_tags",
         "_extra_tags",
         "message",
         "_dissmissed_by_count",
@@ -31,7 +31,11 @@ class PersistentMessageAdmin(admin.ModelAdmin):
     def _is_active(self, obj: PersistentMessage) -> bool:
         return obj.is_active
 
-    @admin.display(description="Compiled extra tags")
+    @admin.display(description="Default extra_tags")
+    def _default_extra_tags(self, obj: PersistentMessage) -> str:
+        return mark_safe(f"<code>{obj.default_extra_tags}</code>")  # noqa: S308
+
+    @admin.display(description="Combined extra_tags")
     def _extra_tags(self, obj: PersistentMessage) -> str:
         return mark_safe(f"<code>{obj.extra_tags}</code>")  # noqa: S308
 
@@ -68,4 +72,4 @@ class MessageDismissalAdmin(admin.ModelAdmin):
         "user__first_name",
         "user__last_name",
     )
-    list_filter = ("message__message_target", "dismissed_at")
+    list_filter = ("message__target", "dismissed_at")
