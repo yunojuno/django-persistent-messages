@@ -15,7 +15,7 @@ from .exceptions import UndismissableMessage
 MESSAGE_LEVEL_CHOICES = [(v, k) for k, v in messages.DEFAULT_LEVELS.items()]
 
 
-class PersistentQuerySet(models.QuerySet):
+class PersistentMessageQuerySet(models.QuerySet):
     def active(self) -> models.QuerySet[PersistentMessage]:
         """Filter messages to those that are currently active (based on dates)."""
         start_date_filter = models.Q(display_from__lte=tz_now())
@@ -153,7 +153,7 @@ class PersistentMessage(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    objects = PersistentQuerySet.as_manager()
+    objects = PersistentMessageQuerySet.as_manager()
 
     def __str__(self) -> str:
         return f'"{truncatechars_html(self.content, 50)}"'

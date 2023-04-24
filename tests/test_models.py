@@ -73,3 +73,14 @@ class TestMessageDismissal:
     def test_dismiss__anon(self, pm: PersistentMessage) -> None:
         pm.dismiss(AnonymousUser)
         assert pm.dismissed_by.count() == 0
+
+
+@pytest.mark.django_db
+class TestPersistentMessageQuerySet:
+    @pytest.mark.parametrize("start_offset,end_offset,count", [(0, 0, 1), (0, 1, 2)])
+    def test_active(
+        self, pm: PersistentMessage, start_offset: int, end_offset: int, count: int
+    ) -> None:
+        assert PersistentMessage.objects.active().get() == pm
+        pm.deactivate()
+        assert not PersistentMessage.objects.active().exists()
