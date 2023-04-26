@@ -3,7 +3,7 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_DELETE
 
 from .exceptions import PersistentMessageException
 from .models import PersistentMessage
@@ -11,7 +11,7 @@ from .models import PersistentMessage
 logger = logging.getLogger(__name__)
 
 
-@require_GET
+@require_DELETE
 @login_required  # anonymous users can't dismiss messages
 def dismiss_message(request: HttpRequest, message_id: int) -> HttpResponse:
     """
@@ -31,7 +31,8 @@ def dismiss_message(request: HttpRequest, message_id: int) -> HttpResponse:
     message = get_object_or_404(PersistentMessage, pk=message_id)
     try:
         message.dismiss(request.user)
+        logger.debug("Successfully dismissed persistent message %s", message_id)
     except PersistentMessageException:
-        logger.exception("Error dismissing message %s", message_id)
+        logger.exception("Error dismissing persistent message %s", message_id)
         return HttpResponse(status=400)
     return HttpResponse(status=204)
