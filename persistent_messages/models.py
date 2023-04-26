@@ -173,9 +173,16 @@ class PersistentMessage(models.Model):
         return self.display_from <= tz_now()
 
     @property
+    def id_tag(self) -> str:
+        """Return a unique pmid-* tag that is added to extra_tags."""
+        return f"pmid-{self.id}" if self.id else ""
+
+    @property
     def default_extra_tags(self) -> str:
         """Return the tag derived from the message ('safe', 'persistent', etc.)."""
         tags = ["persistent"]
+        if self.id_tag:
+            tags.append(self.id_tag)
         tags.append("dismissable" if self.is_dismissable else "undismissable")
         tags.append("safe" if self.mark_content_safe else "unsafe")
         return " ".join(tags)

@@ -47,6 +47,15 @@ class TestPersistentMessage:
         assert pm.extra_tags == expected
 
     @pytest.mark.django_db
+    def test_extra_tags__id_tag(self, pm: PersistentMessage) -> None:
+        assert set(pm.extra_tags.split()) == {
+            "persistent",
+            "dismissable",
+            "unsafe",
+            pm.id_tag,
+        }
+
+    @pytest.mark.django_db
     def test_deactivate(self, pm: PersistentMessage) -> None:
         assert pm.is_active
         pm.deactivate()

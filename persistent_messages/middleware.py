@@ -25,8 +25,5 @@ class PersistentMessageMiddleware:
             if message.message in existing_messages:
                 continue
             messages.add_message(
-                request,
-                message.level,
-                message.message,
-                message.extra_tags,
+                request, message.level, message.message, message.extra_tags
             )
