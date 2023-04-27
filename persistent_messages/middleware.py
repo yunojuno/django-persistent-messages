@@ -6,8 +6,9 @@ from django.http import HttpRequest, HttpResponse
 from .models import get_user_messages
 
 
-def get_messages(request: HttpRequest) -> list[str]:
-    return [m for m in messages.get_messages(request)]
+def get_request_messages(request: HttpRequest) -> list[str]:
+    """Return the list of existing messages as strings."""
+    return [str(m) for m in messages.get_messages(request)]
 
 
 class PersistentMessageMiddleware:
@@ -19,7 +20,7 @@ class PersistentMessageMiddleware:
         return self.get_response(request)
 
     def add_messages(self, request: HttpRequest) -> None:
-        existing_messages = get_messages(request)
+        existing_messages = get_request_messages(request)
         for message in get_user_messages(request.user):
             # ignore duplicate messages
             if message.message in existing_messages:

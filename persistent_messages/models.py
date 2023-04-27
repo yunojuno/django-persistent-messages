@@ -255,4 +255,5 @@ def get_user_messages(
     will be returned.
 
     """
-    return PersistentMessage.objects.filter_user(user).active()
+    msgs = PersistentMessage.objects.filter_user(user).active()
+    return msgs

@@ -18,9 +18,12 @@ class TestContextProcessors:
         context = persistent_messages(request)
         assert context["persistent_messages"] == [
             {
+                "pk": pm.pk,
                 "level": pm.level,
-                "level_tag": pm.level_tag,
+                "status": pm.level_tag,
                 "message": pm.message,
                 "extra_tags": pm.extra_tags,
+                "is_dismissable": pm.is_dismissable,
+                "is_safe": pm.mark_content_safe,
             }
         ]
