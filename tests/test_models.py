@@ -3,7 +3,27 @@ from django.contrib.auth.models import AnonymousUser, User
 from django.contrib.messages import constants as message_constants
 
 from persistent_messages.exceptions import UndismissableMessage
-from persistent_messages.models import PersistentMessage
+from persistent_messages.models import LEVEL_TAGS, TAG_LEVELS, PersistentMessage
+
+
+def test_custom_MESSAGE_TAGS() -> None:
+    # track any changes to the default tags in Django
+    assert LEVEL_TAGS == {
+        10: "debug",
+        20: "info",
+        25: "success",
+        30: "warning",
+        40: "error",
+        999: "emergency",
+    }
+    assert TAG_LEVELS == {
+        "debug": 10,
+        "info": 20,
+        "success": 25,
+        "warning": 30,
+        "error": 40,
+        "emergency": 999,
+    }
 
 
 class TestPersistentMessage:

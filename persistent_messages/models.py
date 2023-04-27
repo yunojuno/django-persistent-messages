@@ -14,6 +14,9 @@ from .exceptions import UndismissableMessage
 
 # use the contrib func as it pulls in settings overrides
 LEVEL_TAGS = get_level_tags()
+# invert the dict to get a tag -> level mapping
+# NB this will fail if there are duplicate values in the original dict
+TAG_LEVELS = {tag: level for level, tag in LEVEL_TAGS.items()}
 
 
 class PersistentMessageQuerySet(models.QuerySet):

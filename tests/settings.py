@@ -72,3 +72,6 @@ ROOT_URLCONF = "tests.urls"
 
 if not DEBUG:
     raise Exception("This settings file can only be used with DEBUG=True")
+
+# === test settings ===
+MESSAGE_TAGS = {999: "emergency"}
