@@ -243,17 +243,3 @@ class MessageDismissal(models.Model):
 
     class Meta:
         unique_together = ("user", "message")
-
-
-def get_user_messages(
-    user: settings.AUTH_USER_MODEL | AnonymousUser,
-) -> models.QuerySet[PersistentMessage]:
-    """
-    Return the messages for the given user.
-
-    If the user is not authenticated, only messages targeted at all users
-    will be returned.
-
-    """
-    msgs = PersistentMessage.objects.filter_user(user).active()
-    return msgs

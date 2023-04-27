@@ -1,14 +1,8 @@
 from typing import Callable
 
-from django.contrib import messages
 from django.http import HttpRequest, HttpResponse
 
-from .models import get_user_messages
-
-
-def get_request_messages(request: HttpRequest) -> list[str]:
-    """Return the list of existing messages as strings."""
-    return [str(m) for m in messages.get_messages(request)]
+from .shortcuts import add_message, get_user_messages
 
 
 class PersistentMessageMiddleware:
@@ -16,15 +10,7 @@ class PersistentMessageMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        self.add_messages(request)
-        return self.get_response(request)
-
-    def add_messages(self, request: HttpRequest) -> None:
-        existing_messages = get_request_messages(request)
+        response = self.get_response(request)
         for message in get_user_messages(request.user):
-            # ignore duplicate messages
-            if message.message in existing_messages:
-                continue
-            messages.add_message(
-                request, message.level, message.message, message.extra_tags
-            )
+            add_message(request, message)
+        return response

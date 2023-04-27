@@ -1,6 +1,6 @@
 from django.http import HttpRequest
 
-from .models import get_user_messages
+from .shortcuts import get_user_messages
 
 
 def persistent_messages(request: HttpRequest) -> dict[str, list[dict[str, str]]]:
