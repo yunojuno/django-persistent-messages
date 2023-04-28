@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser, Group
@@ -89,6 +91,17 @@ class PersistentMessageQuerySet(models.QuerySet):
         return self.exclude(dismissed_by=user).filter(or_filter)
 
 
+class PersistentMessageManager(models.Manager):
+    def create(self, **kwargs: Any) -> Any:
+        user = kwargs.pop("user", None)
+        if user:
+            kwargs["target"] = PersistentMessage.TargetType.USERS_OR_GROUPS
+        obj = super().create(**kwargs)
+        if user:
+            obj.target_users.add(user)
+        return obj
+
+
 class PersistentMessage(models.Model):
     """
     Wrap the Django message framework with some storage.
@@ -168,17 +181,19 @@ class PersistentMessage(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    objects = PersistentMessageQuerySet.as_manager()
+    objects = PersistentMessageManager.from_queryset(PersistentMessageQuerySet)()
 
     def __str__(self) -> str:
         return f'"{truncatechars_html(self.content, 50)}"'
 
     @property
     def tag(self) -> str:
+        """Return the level as a tag (e.g. 'info', 'warning', etc.)."""
         return get_tag(self.level)
 
     @tag.setter
     def tag(self, value: str) -> None:
+        """Set the level from a tag (e.g. 'info', 'warning', etc.)."""
         self.level = get_level(value)
 
     @property
