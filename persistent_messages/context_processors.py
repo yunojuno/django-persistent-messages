@@ -10,7 +10,7 @@ def persistent_messages(request: HttpRequest) -> dict[str, list[dict[str, str]]]
             {
                 "pk": pm.pk,
                 "level": pm.level,
-                "status": pm.level_tag,
+                "tag": pm.tag,
                 "message": pm.message,
                 "extra_tags": pm.extra_tags,
                 "is_dismissable": pm.is_dismissable,

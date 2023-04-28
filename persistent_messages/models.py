@@ -19,6 +19,16 @@ LEVEL_TAGS = get_level_tags()
 TAG_LEVELS = {tag: level for level, tag in LEVEL_TAGS.items()}
 
 
+def get_level(tag: str) -> int:
+    """Convert a tag to a level."""
+    return TAG_LEVELS[tag]
+
+
+def get_tag(level: int) -> str:
+    """Convert a level to a tag."""
+    return LEVEL_TAGS[level]
+
+
 class PersistentMessageQuerySet(models.QuerySet):
     def active(self) -> models.QuerySet[PersistentMessage]:
         """Filter messages to those that are currently active (based on dates)."""
@@ -89,8 +99,6 @@ class PersistentMessage(models.Model):
 
     """
 
-    # piggy-back on the message framework's levels
-    LEVEL_TAGS = messages.utils.get_level_tags()
     # convert to a list of tuples for use in a model field
     LEVEL_TAG_CHOICES = [(k, v) for k, v in LEVEL_TAGS.items()]
 
@@ -166,8 +174,12 @@ class PersistentMessage(models.Model):
         return f'"{truncatechars_html(self.content, 50)}"'
 
     @property
-    def level_tag(self) -> str:
-        return LEVEL_TAGS.get(self.level, "")
+    def tag(self) -> str:
+        return get_tag(self.level)
+
+    @tag.setter
+    def tag(self, value: str) -> None:
+        self.level = get_level(value)
 
     @property
     def is_active(self) -> bool:
