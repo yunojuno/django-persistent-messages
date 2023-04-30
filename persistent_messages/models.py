@@ -5,9 +5,9 @@ from typing import Any
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser, Group
-from django.contrib.messages.storage.base import Message
 from django.contrib.messages.utils import get_level_tags
 from django.db import models
+from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils.timezone import now as tz_now
 from django.utils.translation import gettext_lazy as _lazy
@@ -32,10 +32,6 @@ def get_tag(level: int) -> str:
 
 
 class PersistentMessageQuerySet(models.QuerySet):
-    def as_django_messages(self) -> list[Message]:
-        """Convert QS to a list of Django-compatible messages."""
-        return [m.as_django_message() for m in self]
-
     def active(self) -> models.QuerySet[PersistentMessage]:
         """Filter messages to those that are currently active (based on dates)."""
         start_date_filter = models.Q(display_from__lte=tz_now())
@@ -237,9 +233,11 @@ class PersistentMessage(models.Model):
         )
         return " ".join(all_tags.keys())
 
-    def as_django_message(self) -> Message:
-        """Return a Django message object for this message."""
-        return Message(self.level, self.message, extra_tags=self.extra_tags)
+    def dismiss_url(self) -> str:
+        """Return the URL to dismiss this message."""
+        if not self.id:
+            return ""
+        return reverse("persistent_messages:dismiss_message", args=[self.id])
 
     def dismiss(self, user: settings.AUTH_USER_MODEL) -> None:
         """

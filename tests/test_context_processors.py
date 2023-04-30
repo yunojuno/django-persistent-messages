@@ -17,4 +17,4 @@ class TestContextProcessors:
         request.user = user
         context = persistent_messages(request)
         # context is a lambda so we need to call it to get the actual value
-        assert context["persistent_messages"]() == [pm.as_django_message()]
+        assert context["persistent_messages"]() == [pm]

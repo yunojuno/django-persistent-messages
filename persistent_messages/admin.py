@@ -11,6 +11,7 @@ class PersistentMessageAdmin(admin.ModelAdmin):
     list_display = (
         "content",
         "target",
+        "level_tag",
         "display_from",
         "display_until",
         "_is_active",
@@ -27,6 +28,7 @@ class PersistentMessageAdmin(admin.ModelAdmin):
     )
     search_fields = ("content",)
     actions = ("deactivate_messages", "reactivate_messages")
+    list_filter = ("level", "target", "is_dismissable", "mark_content_safe")
 
     @admin.display(boolean=True)
     def _is_active(self, obj: PersistentMessage) -> bool:

@@ -1,0 +1,14 @@
+<div class="message">
+    <dl>
+        <div><dt>pk</dt><dd>{{ message.pk|default:"-" }}</dd></div>
+        <div><dt>level</dt><dd>{{ message.level }}</dd></div>
+        <div><dt>level_tag</dt><dd>{{ message.level_tag }}</dd></div>
+        <div><dt>message</dt><dd>{{ message.message }}</dd></div>
+        <div><dt>extra_tags</dt><dd>{{ message.extra_tags|default:"(none)" }}</dd></div>
+        <div><dt>tags</dt><dd>{{ message.tags }}</dd></div>
+        <div><dt>is_safe</dt><dd>{{ message.is_safe }}</dd></div>
+        <div><dt>is_dismissable</dt><dd>{{ message.is_dismissable }}</dd></div>
+        <div><dt>is_persistent</dt><dd>{{ message.is_persistent }}</dd></div>
+        <div><dt>dismiss_url</dt><dd>{{ message.dismiss_url|default:"-" }}</dd></div>
+    </dl>
+</div>

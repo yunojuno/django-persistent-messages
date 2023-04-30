@@ -1,25 +1,82 @@
+{% load persistent_message_tags %}
 <html>
     <head>
         <title>My Template</title>
+        <style>
+            body {
+                font-family: sans-serif;
+            }
+            h2 {
+                margin-top: 2em;
+                margin-bottom: .5em;
+                padding-left: 10px;
+            }
+            span.code {
+                font-family: monospace;
+                font-weight: normal;
+                font-size: 18px;
+                float:right;
+            }
+            dl,dt,
+            dd {
+                display: inline-block;
+                vertical-align: top;
+                margin: 0;
+            }
+            dt {
+                min-width: 150px;
+            }
+            dd {
+                font-family: monospace;
+            }
+            .message .pull-right {
+                float: right;
+            }
+            .message {
+                padding: 0.5em;
+                margin: 0.5em;
+                border: 1px solid #ccc;
+            }
+            .message.info {
+                background-color: aliceblue;
+            }
+            .message.success {
+                background-color: #e8f5e9;
+            }
+            .message.warning {
+                background-color: #fffde7;
+            }
+            .message.persistent {
+                {% comment %} border-color: #808080; {% endcomment %}
+            }
+            .message .tags {
+                font-family: monospace;
+            }
+        </style>
     </head>
     <body>
-        <dl>
-            <dt>request.user</dt>
-            <dd>{{ request.user }}</dd>
-            <dt>messages</dt>
-            <dd>
-                {% for m in messages %}"{{ m }}" [{{ m.tags }}]<br />{% empty %}(none){% endfor %}
-            </dd>
-            <dt>persistent messages</dt>
-            <dd>
-                {% for m in persistent_messages %}"{{ m }}" [{{ m.tags }}]<br />{%empty%}-{%endfor%}
-            </dd>
-            <dt>all messages</dt>
-            <dd>
-                {% for m in all_messages %} "{{ m }}" [{{ m.tags }}]<br />{%empty%}(n){%endfor%}
-            </dd>
-        </dl>
-        <hr />
-        <pre>{% debug %}</pre>
+        <h1>PersistentMessage demo.</h1>
+        <p>Examples of flash and persistent message rendering.</p>
+
+        <h2>flash messages <span class="code">{% verbatim %}{{ messages }}{% endverbatim %}</span></h2>
+        {% for msg in messages %} {% include "_message.html" with message=msg %} {% endfor %}
+
+        <h2>persistent messages <span class="code">{% verbatim %}{{ persistent_messages }}{% endverbatim %}</span></h2>
+        {% for msg in persistent_messages %} {% include "_message.html" with message=msg %} {% empty %}-{% endfor %}
+
+        <h2>all messages <span class="code">{% verbatim %}{{ all_messages }}{% endverbatim %}</span></h2>
+        {% for msg in all_messages %}{% include "_message.html" with message=msg %}{% endfor %}
+
+        <h2>all messages, sorted by level asc (default)<span class="code">{% verbatim %}{{ all_messages|sort_messages }}{% endverbatim %}</span></h2>
+        {% for msg in all_messages|sort_messages %}{% include "_message.html" with message=msg %}{% endfor %}
+
+        <h2>all messages, sorted by level desc<span class="code">{% verbatim %}{{ all_messages|sort_messages:"-level" }}{% endverbatim %}</span></h2>
+        {% for msg in all_messages|sort_messages:"-level" %}{% include "_message.html" with message=msg %}{% endfor %}
+
+        <h2>all messages, sorted by message<span class="code">{% verbatim %}{{ all_messages|sort_messages:"message" }}{% endverbatim %}</span></h2>
+        {% for msg in all_messages|sort_messages:"message" %}{% include "_message.html" with message=msg %}{% endfor %}
+
+        <h2>all messages, serialized<span class="code">{% verbatim %}{{ all_messages|serialize_messages }}{% endverbatim %}</span></h2>
+        <dl>{%with all_messages|serialize_messages as all_messages %} {%for message in all_messages%} {% include "_serialized_message.html" %} {%empty%} (none) {%endfor%} {%endwith%}</dl>
     </body>
 </html>
