@@ -3,14 +3,23 @@
         <title>My Template</title>
     </head>
     <body>
-        <section id="messages">
-            {% for message in messages %}
-            <div class="message {{ message.extra_tags }}">
-                <p>{{ message.message }}</p>
-            </div>
-            {% endfor %}
-        </section>
-        <h1>My Template</h1>
-        <p>My template is a template.</p>
+        <dl>
+            <dt>request.user</dt>
+            <dd>{{ request.user }}</dd>
+            <dt>messages</dt>
+            <dd>
+                {% for m in messages %}"{{ m }}" [{{ m.tags }}]<br />{% empty %}(none){% endfor %}
+            </dd>
+            <dt>persistent messages</dt>
+            <dd>
+                {% for m in persistent_messages %}"{{ m }}" [{{ m.tags }}]<br />{%empty%}-{%endfor%}
+            </dd>
+            <dt>all messages</dt>
+            <dd>
+                {% for m in all_messages %} "{{ m }}" [{{ m.tags }}]<br />{%empty%}(n){%endfor%}
+            </dd>
+        </dl>
+        <hr />
+        <pre>{% debug %}</pre>
     </body>
 </html>

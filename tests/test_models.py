@@ -32,9 +32,11 @@ class TestPersistentMessage:
         assert pm.is_active
         assert pm.level == message_constants.INFO
         assert pm.is_dismissable
-        assert pm.custom_extra_tags == ""
-        assert pm.default_extra_tags == "persistent dismissable unsafe"
+        assert pm.custom_tags == ""
+        assert pm.default_tags == "persistent dismissable unsafe"
         assert pm.extra_tags == "persistent dismissable unsafe"
+        assert pm.level_tag == "info"
+        assert pm.tags == "persistent dismissable unsafe info"
         assert pm.message == pm.content
         assert pm.display_from is not None
         assert pm.display_until is None
@@ -49,21 +51,19 @@ class TestPersistentMessage:
             (True, True, "persistent dismissable safe"),
         ],
     )
-    def test_default_extra_tags(
-        self, dismissable: bool, safe: bool, expected: str
-    ) -> None:
+    def test_default_tags(self, dismissable: bool, safe: bool, expected: str) -> None:
         pm = PersistentMessage(is_dismissable=dismissable, mark_content_safe=safe)
-        assert pm.default_extra_tags == expected
+        assert pm.default_tags == expected
 
     @pytest.mark.parametrize(
-        "custom_extra_tags, expected",
+        "custom_tags, expected",
         [
             ("", "persistent dismissable unsafe"),
             ("foo", "persistent dismissable unsafe foo"),
         ],
     )
-    def test_extra_tags(self, custom_extra_tags: str, expected: str) -> None:
-        pm = PersistentMessage(custom_extra_tags=custom_extra_tags)
+    def test_extra_tags(self, custom_tags: str, expected: str) -> None:
+        pm = PersistentMessage(custom_tags=custom_tags)
         assert pm.extra_tags == expected
 
     @pytest.mark.django_db

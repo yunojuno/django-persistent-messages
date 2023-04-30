@@ -25,7 +25,6 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "persistent_messages.middleware.PersistentMessageMiddleware",
 ]
 
 PROJECT_DIR = path.abspath(path.join(path.dirname(__file__)))
@@ -38,8 +37,10 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.contrib.messages.context_processors.messages",
-                "django.contrib.auth.context_processors.auth",
                 "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "persistent_messages.context_processors.persistent_messages",
+                "persistent_messages.context_processors.all_messages",
             ]
         },
     }

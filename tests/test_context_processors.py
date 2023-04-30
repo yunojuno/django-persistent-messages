@@ -16,14 +16,5 @@ class TestContextProcessors:
         request = rf.get("/")
         request.user = user
         context = persistent_messages(request)
-        assert context["persistent_messages"] == [
-            {
-                "pk": pm.pk,
-                "level": pm.level,
-                "tag": pm.tag,
-                "message": pm.message,
-                "extra_tags": pm.extra_tags,
-                "is_dismissable": pm.is_dismissable,
-                "is_safe": pm.mark_content_safe,
-            }
-        ]
+        # context is a lambda so we need to call it to get the actual value
+        assert context["persistent_messages"]() == [pm.as_django_message()]

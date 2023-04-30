@@ -5,9 +5,9 @@ from typing import Any
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser, Group
+from django.contrib.messages.storage.base import Message
 from django.contrib.messages.utils import get_level_tags
 from django.db import models
-from django.template.defaultfilters import truncatechars_html
 from django.utils.safestring import mark_safe
 from django.utils.timezone import now as tz_now
 from django.utils.translation import gettext_lazy as _lazy
@@ -32,6 +32,10 @@ def get_tag(level: int) -> str:
 
 
 class PersistentMessageQuerySet(models.QuerySet):
+    def as_django_messages(self) -> list[Message]:
+        """Convert QS to a list of Django-compatible messages."""
+        return [m.as_django_message() for m in self]
+
     def active(self) -> models.QuerySet[PersistentMessage]:
         """Filter messages to those that are currently active (based on dates)."""
         start_date_filter = models.Q(display_from__lte=tz_now())
@@ -170,7 +174,7 @@ class PersistentMessage(models.Model):
         through="MessageDismissal",
         help_text=_lazy("Users who have dismissed this message."),
     )
-    custom_extra_tags = models.CharField(
+    custom_tags = models.CharField(
         max_length=100,
         blank=True,
         help_text=_lazy(
@@ -184,17 +188,7 @@ class PersistentMessage(models.Model):
     objects = PersistentMessageManager.from_queryset(PersistentMessageQuerySet)()
 
     def __str__(self) -> str:
-        return f'"{truncatechars_html(self.content, 50)}"'
-
-    @property
-    def tag(self) -> str:
-        """Return the level as a tag (e.g. 'info', 'warning', etc.)."""
-        return get_tag(self.level)
-
-    @tag.setter
-    def tag(self, value: str) -> None:
-        """Set the level from a tag (e.g. 'info', 'warning', etc.)."""
-        self.level = get_level(value)
+        return self.message
 
     @property
     def is_active(self) -> bool:
@@ -202,13 +196,31 @@ class PersistentMessage(models.Model):
             return self.display_from <= tz_now() < self.display_until
         return self.display_from <= tz_now()
 
+    # === properties added for compatibility with the messages framework ===
+    @property
+    def tags(self) -> str:
+        return " ".join(tag for tag in [self.extra_tags, self.level_tag] if tag)
+
+    @property
+    def level_tag(self) -> str:
+        return LEVEL_TAGS.get(self.level, "")
+
+    @property
+    def message(self) -> str:
+        """Return the message content, with HTML escaped if required."""
+        if self.mark_content_safe:
+            return mark_safe(self.content)  # noqa: S308
+        return self.content
+
+    # /=== properties added for compatibility with the messages framework ===
+
     @property
     def id_tag(self) -> str:
         """Return a unique pmid-* tag that is added to extra_tags."""
         return f"pmid-{self.id}" if self.id else ""
 
     @property
-    def default_extra_tags(self) -> str:
+    def default_tags(self) -> str:
         """Return the tag derived from the message ('safe', 'persistent', etc.)."""
         tags = ["persistent"]
         if self.id_tag:
@@ -219,18 +231,15 @@ class PersistentMessage(models.Model):
 
     @property
     def extra_tags(self) -> str:
-        """Return custom_extra_tags, default_extra_tags combined."""
+        """Return custom_tags, default_tags combined."""
         all_tags = dict.fromkeys(
-            self.default_extra_tags.split() + self.custom_extra_tags.strip().split()
+            self.default_tags.split() + self.custom_tags.strip().split()
         )
         return " ".join(all_tags.keys())
 
-    @property
-    def message(self) -> str:
-        """Return the message content, with HTML escaped if required."""
-        if self.mark_content_safe:
-            return mark_safe(self.content)  # noqa: S308
-        return self.content
+    def as_django_message(self) -> Message:
+        """Return a Django message object for this message."""
+        return Message(self.level, self.message, extra_tags=self.extra_tags)
 
     def dismiss(self, user: settings.AUTH_USER_MODEL) -> None:
         """

@@ -1,22 +1,20 @@
+from typing import Callable
+
+from django.contrib.messages import get_messages
+from django.contrib.messages.storage.base import Message
 from django.http import HttpRequest
 
-from .shortcuts import get_user_messages
+from .shortcuts import get_persistent_messages
 
 
-def persistent_messages(request: HttpRequest) -> dict[str, list[dict[str, str]]]:
-    """Add persistent messages to the request context."""
-    messages = {
-        "persistent_messages": [
-            {
-                "pk": pm.pk,
-                "level": pm.level,
-                "tag": pm.tag,
-                "message": pm.message,
-                "extra_tags": pm.extra_tags,
-                "is_dismissable": pm.is_dismissable,
-                "is_safe": pm.mark_content_safe,
-            }
-            for pm in get_user_messages(request.user)
-        ]
+def persistent_messages(request: HttpRequest) -> dict[str, Callable[[], list[Message]]]:
+    """Return just the persistent messages."""
+    return {"persistent_messages": lambda: get_persistent_messages(request)}
+
+
+def all_messages(request: HttpRequest) -> dict[str, Callable[[], list[Message]]]:
+    """Return contrib.messages and persistent_messages combined."""
+    return {
+        "all_messages": lambda: list(get_messages(request))
+        + get_persistent_messages(request)
     }
-    return messages

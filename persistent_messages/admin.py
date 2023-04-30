@@ -17,9 +17,10 @@ class PersistentMessageAdmin(admin.ModelAdmin):
     )
     raw_id_fields = ("target_users", "target_groups", "dismissed_by")
     readonly_fields = (
-        "_default_extra_tags",
+        "_level_tag",
         "_extra_tags",
-        "message",
+        "_tags",
+        "_message",
         "_dissmissed_by_count",
         "created_at",
         "updated_at",
@@ -31,13 +32,21 @@ class PersistentMessageAdmin(admin.ModelAdmin):
     def _is_active(self, obj: PersistentMessage) -> bool:
         return obj.is_active
 
-    @admin.display(description="Default extra_tags")
-    def _default_extra_tags(self, obj: PersistentMessage) -> str:
-        return mark_safe(f"<code>{obj.default_extra_tags}</code>")  # noqa: S308
+    @admin.display(description="Message")
+    def _message(self, obj: PersistentMessage) -> str:
+        return mark_safe(f"<blockquote>{obj.message}</blockquote>")  # noqa: S308
 
-    @admin.display(description="Combined extra_tags")
+    @admin.display(description="Level tag")
+    def _level_tag(self, obj: PersistentMessage) -> str:
+        return mark_safe(f"<code>{obj.level_tag}</code>")  # noqa: S308
+
+    @admin.display(description="Extra tags")
     def _extra_tags(self, obj: PersistentMessage) -> str:
         return mark_safe(f"<code>{obj.extra_tags}</code>")  # noqa: S308
+
+    @admin.display(description="All tags")
+    def _tags(self, obj: PersistentMessage) -> str:
+        return mark_safe(f"<code>{obj.tags}</code>")  # noqa: S308
 
     @admin.display(description="Dismissed by (# users)")
     def _dissmissed_by_count(self, obj: PersistentMessage) -> str:
