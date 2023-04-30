@@ -235,7 +235,10 @@ class PersistentMessage(models.Model):
 
     def dismiss_url(self) -> str:
         """Return the URL to dismiss this message."""
+        # you can't dismiss a message that hasn't been saved yet
         if not self.id:
+            return ""
+        if not self.is_dismissable:
             return ""
         return reverse("persistent_messages:dismiss_message", args=[self.id])
 
