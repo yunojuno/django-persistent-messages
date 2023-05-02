@@ -21,9 +21,11 @@ def _serialize_message(message: Message) -> dict:
         "message": message.message,
         "extra_tags": message.extra_tags,
         "tags": message.tags,
+        # custom properties parsed from tags
         "is_safe": "safe" in tags,
         "is_dismissable": "dismissable" in tags,
-        "is_persistent": False,
+        # can be used to fake persistent messages
+        "is_persistent": "persistent" in tags,
         "dismiss_url": "",
     }
 
@@ -49,6 +51,8 @@ def serialize_message(message: PersistentMessage | Message) -> dict:
         return _serialize_persistent_message(message)
     elif isinstance(message, Message):
         return _serialize_message(message)
+    elif isinstance(message, dict):
+        return message
     else:
         raise ValueError(f"Unknown message type {type(message)}")
 
@@ -65,7 +69,10 @@ def sort_messages(
     sort_by = sort_by or "level"
     reverse = sort_by.startswith("-")
 
-    def key(message: PersistentMessage | Message) -> str | int | datetime:
+    def key(message: PersistentMessage | Message | dict) -> str | int | datetime:
+        if isinstance(message, dict):
+            # will fail hard if the field doesn't exist
+            return message[sort_by.lstrip("-")]
         return getattr(message, sort_by.lstrip("-"))
 
     try:

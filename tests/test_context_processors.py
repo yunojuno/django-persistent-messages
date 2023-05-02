@@ -1,7 +1,8 @@
 import pytest
 
-from persistent_messages.context_processors import persistent_messages
+from persistent_messages.context_processors import all_messages, persistent_messages
 from persistent_messages.models import PersistentMessage
+from persistent_messages.templatetags.persistent_message_tags import serialize_message
 
 
 @pytest.mark.django_db
@@ -18,3 +19,10 @@ class TestContextProcessors:
         context = persistent_messages(request)
         # context is a lambda so we need to call it to get the actual value
         assert context["persistent_messages"]() == [pm]
+
+    def test_all_messages(self, rf, user, pm: PersistentMessage) -> None:
+        request = rf.get("/")
+        request.user = user
+        context = all_messages(request)
+        # context is a lambda so we need to call it to get the actual value
+        assert context["all_messages"]() == [serialize_message(pm)]
