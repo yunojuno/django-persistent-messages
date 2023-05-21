@@ -74,3 +74,7 @@ if not DEBUG:
 
 # === test settings ===
 MESSAGE_TAGS = {999: "emergency"}
+
+MESSAGE_CUSTOM_GROUPS = {
+    "fred": lambda user: user.first_name == "Fred",
+}

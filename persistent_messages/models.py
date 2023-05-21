@@ -6,11 +6,12 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser, Group
 from django.contrib.messages.utils import get_level_tags
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.utils.timezone import now as tz_now
-from django.utils.translation import gettext_lazy as _lazy
+from django.utils.translation import gettext as _, gettext_lazy as _lazy
 
 from .exceptions import UndismissableMessage
 
@@ -40,6 +41,18 @@ class PersistentMessageQuerySet(models.QuerySet):
         )
         return self.filter(start_date_filter).filter(end_date_filter)
 
+    def custom_group_query(self, user: settings.AUTH_USER_MODEL) -> models.Q:
+        """Return a Q object that can be used to filter messages for the given user."""
+        messages = (
+            self.filter(
+                target=PersistentMessage.TargetType.USERS_OR_GROUPS,
+                target_custom_group__isnull=False,
+            )
+            .exclude(target_custom_group="")
+            .active()
+        )
+        return models.Q(id__in=[m.id for m in messages if m.user_in_custom_group(user)])
+
     def filter_user(
         self, user: settings.AUTH_USER_MODEL | AnonymousUser
     ) -> models.QuerySet[PersistentMessage]:
@@ -55,9 +68,6 @@ class PersistentMessageQuerySet(models.QuerySet):
         user, and so iterating through them is not a problem.
 
         """
-        if user.is_anonymous:
-            return self.filter(target=PersistentMessage.TargetType.ALL_USERS)
-
         # If the user is authenticated then we build up the message filter using
         # the following logic: all messages that are targeted at all users, or
         # all authenticated users apply; messaages that are targeted at specific
@@ -65,6 +75,15 @@ class PersistentMessageQuerySet(models.QuerySet):
 
         # filter on ALL_USERS messages as they are global
         all_filter = models.Q(target=PersistentMessage.TargetType.ALL_USERS)
+
+        # filter on ALL_USERS messages as they are global
+        anon_filter = models.Q(target=PersistentMessage.TargetType.ANONYMOUS_ONLY)
+
+        # custom user-attr filters - these need to be evaluated on the fly
+        custom_filter = self.custom_group_query(user)
+
+        if user.is_anonymous:
+            return self.filter(all_filter | anon_filter | custom_filter).active()
 
         # filter on AUTHENTICATED_ONLY messages as we know the user is authenticated
         auth_filter = models.Q(target=PersistentMessage.TargetType.AUTHENTICATED_ONLY)
@@ -85,7 +104,14 @@ class PersistentMessageQuerySet(models.QuerySet):
         )
 
         # combine the filters together as an OR
-        or_filter = all_filter | auth_filter | user_filter | group_filter
+        or_filter = (
+            all_filter
+            | anon_filter
+            | auth_filter
+            | user_filter
+            | group_filter
+            | custom_filter
+        )
 
         # finally, exclude messages that have been dismissed by the user
         return self.exclude(dismissed_by=user).filter(or_filter)
@@ -118,7 +144,8 @@ class PersistentMessage(models.Model):
     class TargetType(models.TextChoices):
         ALL_USERS = "ALL_USERS", "All users, even logged out"
         AUTHENTICATED_ONLY = "AUTHENTICATED_USERS", "All logged-in users"
-        USERS_OR_GROUPS = "USERS_OR_GROUPS", "Specific users or groups"
+        ANONYMOUS_ONLY = "ANONYMOUS_USERS", "All anonymous users"
+        USERS_OR_GROUPS = "USERS_OR_GROUPS", "Specific users or groups (inc. custom)"
 
     content = models.TextField(blank=False)
 
@@ -151,6 +178,11 @@ class PersistentMessage(models.Model):
         ),
         related_name="persistent_messages",
         blank=True,
+    )
+    target_custom_group = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Custom group to enable this flag for",
     )
     display_from = models.DateTimeField(
         help_text=_lazy("The earliest time this message should be shown."),
@@ -185,6 +217,17 @@ class PersistentMessage(models.Model):
 
     def __str__(self) -> str:
         return self.message
+
+    def clean(self) -> None:
+        if custom_group := self.target_custom_group:
+            if custom_group not in settings.MESSAGE_CUSTOM_GROUPS:
+                raise ValidationError(
+                    _("Custom group not in settings.MESSAGE_CUSTOM_GROUPS")
+                )
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     @property
     def is_active(self) -> bool:
@@ -264,6 +307,11 @@ class PersistentMessage(models.Model):
         """Deactivate by setting the display_until property to null."""
         self.display_until = None
         self.save()
+
+    def user_in_custom_group(self, User: settings.AUTH_USER_MODEL) -> bool:
+        if not self.target_custom_group:
+            return False
+        return settings.MESSAGE_CUSTOM_GROUPS[self.target_custom_group](User)
 
 
 class MessageDismissal(models.Model):
