@@ -68,22 +68,24 @@ class PersistentMessageQuerySet(models.QuerySet):
         user, and so iterating through them is not a problem.
 
         """
-        # If the user is authenticated then we build up the message filter using
-        # the following logic: all messages that are targeted at all users, or
-        # all authenticated users apply; messaages that are targeted at specific
-        # users or groups apply if the user is in the target list;
+        messages = self.active()
 
         # filter on ALL_USERS messages as they are global
         all_filter = models.Q(target=PersistentMessage.TargetType.ALL_USERS)
-
-        # filter on ALL_USERS messages as they are global
-        anon_filter = models.Q(target=PersistentMessage.TargetType.ANONYMOUS_ONLY)
 
         # custom user-attr filters - these need to be evaluated on the fly
         custom_filter = self.custom_group_query(user)
 
         if user.is_anonymous:
-            return self.filter(all_filter | anon_filter | custom_filter).active()
+            # filter on ALL_USERS messages as they are global
+            anon_filter = models.Q(target=PersistentMessage.TargetType.ANONYMOUS_ONLY)
+            return messages.filter(all_filter | anon_filter | custom_filter)
+
+        # If the user is authenticated then we build up the message filter using
+        # the following logic: all messages that are targeted at all users, or
+        # all authenticated users apply; messaages that are targeted at specific
+        # users or groups apply if the user is in the target list;
+        messages = messages.exclude(dismissed_by=user)
 
         # filter on AUTHENTICATED_ONLY messages as we know the user is authenticated
         auth_filter = models.Q(target=PersistentMessage.TargetType.AUTHENTICATED_ONLY)
@@ -105,16 +107,10 @@ class PersistentMessageQuerySet(models.QuerySet):
 
         # combine the filters together as an OR
         or_filter = (
-            all_filter
-            | anon_filter
-            | auth_filter
-            | user_filter
-            | group_filter
-            | custom_filter
+            all_filter | auth_filter | user_filter | group_filter | custom_filter
         )
 
-        # finally, exclude messages that have been dismissed by the user
-        return self.exclude(dismissed_by=user).filter(or_filter)
+        return messages.filter(or_filter)
 
 
 class PersistentMessageManager(models.Manager):
