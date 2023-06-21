@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-persistent-messages"
-version = "0.1.0"
+version = "0.2.0"
 description = "Wrapper around django.contrib.messages adding persistence."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
