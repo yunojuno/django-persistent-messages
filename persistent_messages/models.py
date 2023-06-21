@@ -304,10 +304,10 @@ class PersistentMessage(models.Model):
         self.display_until = None
         self.save()
 
-    def user_in_custom_group(self, User: settings.AUTH_USER_MODEL) -> bool:
+    def user_in_custom_group(self, user: settings.AUTH_USER_MODEL) -> bool:
         if not self.target_custom_group:
             return False
-        return settings.MESSAGE_CUSTOM_GROUPS[self.target_custom_group](User)
+        return settings.MESSAGE_CUSTOM_GROUPS[self.target_custom_group](user)
 
 
 class MessageDismissal(models.Model):
