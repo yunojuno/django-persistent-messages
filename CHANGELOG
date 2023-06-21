@@ -1,0 +1,11 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+# v0.2.0
+
+BREAKING CHANGE (technically)
+
+- PersistentMessage.user_in_custom_group `User` parameter has been
+  renamed to `user`. This will only affect you if you were calling
+  the method with keyword arguments.
