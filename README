@@ -8,22 +8,25 @@ Alpha - pls do not use. This README is six years old.
 
 ## Background
 
-Django messages are great for one-off notifications to users, but not for persistent notification
-banners. From the
-[official documentation](https://docs.djangoproject.com/en/1.11/ref/contrib/messages/) on the Django
-messages framework:
+Django messages are great for one-off notifications to users, but not
+for persistent notification banners. From the [official
+documentation](https://docs.djangoproject.com/en/1.11/ref/contrib/messages/)
+on the Django messages framework:
 
-> Quite commonly in web applications, you need to display a one-time notification message to the
-> user after processing a form or some other types of user input. [...] The messages framework
-> allows you to temporarily store messages in one request and retrieve them for display in a
-> subsequent request (usually the next one).
+> Quite commonly in web applications, you need to display a one-time
+> notification message to the user after processing a form or some other
+> types of user input. [...] The messages framework allows you to
+> temporarily store messages in one request and retrieve them for
+> display in a subsequent request (usually the next one).
 
-These one-time messages are usually dynamic, created within a view function, to alert the user to
-something that has just happened. This project is designed to extend the pattern to support
-configurable and persistent messages to users. The canonical use case for this is the EU Cookie
-warning. This appears to everyone (logged in or not) until the user explicitly dismiss it. It is not
-related to any specific action that the user has taken (beyond visiting the site for the first
-time), and it persists across all requests.
+These one-time messages are usually dynamic, created within a view
+function, to alert the user to something that has just happened. This
+project is designed to extend the pattern to support configurable and
+persistent messages to users. The canonical use case for this is the EU
+Cookie warning. This appears to everyone (logged in or not) until the
+user explicitly dismiss it. It is not related to any specific action
+that the user has taken (beyond visiting the site for the first time),
+and it persists across all requests.
 
 ## Requirements
 

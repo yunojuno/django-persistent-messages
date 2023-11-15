@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "django-persistent-messages"
-version = "0.2.0"
+version = "0.3"
 description = "Wrapper around django.contrib.messages adding persistence."
 license = "MIT"
 authors = ["YunoJuno <code@yunojuno.com>"]
 maintainers = ["YunoJuno <code@yunojuno.com>"]
-readme = "README.md"
+readme = "README"
 homepage = "https://github.com/yunojuno/django-persistent-messages"
 repository = "https://github.com/yunojuno/django-persistent-messages"
 documentation = "https://github.com/yunojuno/django-persistent-messages"
@@ -17,11 +17,13 @@ classifiers = [
     "Framework :: Django :: 4.0",
     "Framework :: Django :: 4.1",
     "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.0",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 packages = [{ include = "persistent_messages" }]
 
@@ -32,7 +34,6 @@ django = "^3.2 || ^4.0 || ^5.0"
 [tool.poetry.group.dev.dependencies]
 black = "*"
 coverage = "*"
-freezegun = "*"
 mypy = "*"
 pre-commit = "*"
 pytest = "*"
