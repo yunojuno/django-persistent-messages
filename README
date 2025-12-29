@@ -28,6 +28,10 @@ user explicitly dismiss it. It is not related to any specific action
 that the user has taken (beyond visiting the site for the first time),
 and it persists across all requests.
 
+## Compatibility
+
+Python 3.12+ and Django 5.2-6.0
+
 ## Requirements
 
 -   Messages can be managed via the admin site
