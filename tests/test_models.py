@@ -1,6 +1,11 @@
+from typing import Any
+
 import pytest
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, User
 from django.contrib.messages import constants as message_constants
+from django.core.exceptions import ValidationError
+from django.test import override_settings
 
 from persistent_messages.exceptions import UndismissableMessage
 from persistent_messages.models import LEVEL_TAGS, TAG_LEVELS, PersistentMessage
@@ -121,3 +126,113 @@ class TestPersistentMessageQuerySet:
         assert PersistentMessage.objects.active().get() == pm
         pm.deactivate()
         assert not PersistentMessage.objects.active().exists()
+
+    def test_custom_group_query(self, user: User) -> None:
+        """A message whose custom-group predicate passes is matched.
+
+        tests/settings.py defines one group, "fred", keyed off first_name.
+        """
+        pm = PersistentMessage.objects.create(
+            content="Hello Fred",
+            target=PersistentMessage.TargetType.USERS_OR_GROUPS,
+            target_custom_group="fred",
+        )
+        user.first_name = "Fred"
+
+        matched = PersistentMessage.objects.filter(
+            PersistentMessage.objects.custom_group_query(user)
+        )
+
+        assert list(matched) == [pm]
+
+    @pytest.mark.parametrize("custom_groups", [{}, None])
+    def test_custom_group_query__no_groups_configured_runs_no_query(
+        self,
+        user: User,
+        django_assert_num_queries: Any,
+        custom_groups: dict | None,
+    ) -> None:
+        """No configured groups means no stored message can match.
+
+        clean() only allows a target_custom_group that exists in
+        MESSAGE_CUSTOM_GROUPS, so with the setting empty (or absent, which
+        is how most projects run) the query this used to evaluate could not
+        return a row. filter_user() calls this every time, and for a
+        project rendering site-wide banners that is once per page.
+
+        `None` covers a project that sets it to nothing; see the sibling
+        test for one that has never defined it at all.
+        """
+        PersistentMessage.objects.create(
+            content="Hello Fred",
+            target=PersistentMessage.TargetType.USERS_OR_GROUPS,
+            target_custom_group="fred",
+        )
+
+        with override_settings(MESSAGE_CUSTOM_GROUPS=custom_groups):
+            with django_assert_num_queries(0):
+                query = PersistentMessage.objects.custom_group_query(user)
+            assert not PersistentMessage.objects.filter(query).exists()
+
+    def test_custom_group_query__setting_undefined(
+        self, user: User, django_assert_num_queries: Any
+    ) -> None:
+        """The setting is optional, and absent is the common case.
+
+        Deleting the attribute inside override_settings is how a project
+        that has never declared MESSAGE_CUSTOM_GROUPS is reproduced -
+        override_settings cannot express it, and this is the case the
+        getattr default exists for.
+        """
+        PersistentMessage.objects.create(
+            content="Hello Fred",
+            target=PersistentMessage.TargetType.USERS_OR_GROUPS,
+            target_custom_group="fred",
+        )
+
+        with override_settings():
+            del settings.MESSAGE_CUSTOM_GROUPS
+            with django_assert_num_queries(0):
+                query = PersistentMessage.objects.custom_group_query(user)
+            assert not PersistentMessage.objects.filter(query).exists()
+
+    @pytest.mark.parametrize(
+        "user_is_anonymous,expected_queries", [(True, 1), (False, 1)]
+    )
+    def test_filter_user__no_groups_configured_costs_one_query(
+        self,
+        pm: PersistentMessage,
+        user: User,
+        django_assert_num_queries: Any,
+        user_is_anonymous: bool,
+        expected_queries: int,
+    ) -> None:
+        """The whole point of the short-circuit, from the caller's side.
+
+        Before it, every filter_user() cost two queries however the
+        setting was configured: the message lookup, plus the one
+        custom_group_query evaluated eagerly to build its Q.
+        """
+        pm.target = PersistentMessage.TargetType.ALL_USERS
+        pm.save()
+        subject = AnonymousUser() if user_is_anonymous else user
+
+        with override_settings(MESSAGE_CUSTOM_GROUPS={}):
+            with django_assert_num_queries(expected_queries):
+                assert list(PersistentMessage.objects.filter_user(subject)) == [pm]
+
+    def test_clean__no_groups_configured(self) -> None:
+        """An unknown group is a ValidationError, not an AttributeError.
+
+        MESSAGE_CUSTOM_GROUPS is optional, so a project that has never
+        defined it should still get a readable form error here.
+        """
+        pm = PersistentMessage(
+            content="Hello Fred",
+            target=PersistentMessage.TargetType.USERS_OR_GROUPS,
+            target_custom_group="fred",
+        )
+
+        with override_settings(MESSAGE_CUSTOM_GROUPS=None):
+            with pytest.raises(ValidationError):
+                pm.clean()
