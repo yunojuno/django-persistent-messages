@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 from django.conf import settings
 from django.contrib import messages
@@ -20,6 +20,18 @@ LEVEL_TAGS = get_level_tags()
 # invert the dict to get a tag -> level mapping
 # NB this will fail if there are duplicate values in the original dict
 TAG_LEVELS = {tag: level for level, tag in LEVEL_TAGS.items()}
+
+
+def custom_groups() -> dict[str, Callable[[settings.AUTH_USER_MODEL], bool]]:
+    """
+    Return settings.MESSAGE_CUSTOM_GROUPS, defaulting to empty.
+
+    The setting is optional - most projects target users and auth Groups
+    and never define it - so it is read through here rather than as a bare
+    attribute lookup, which would raise AttributeError for them.
+
+    """
+    return getattr(settings, "MESSAGE_CUSTOM_GROUPS", None) or {}
 
 
 def get_level(tag: str) -> int:
@@ -42,7 +54,27 @@ class PersistentMessageQuerySet(models.QuerySet):
         return self.filter(start_date_filter).filter(end_date_filter)
 
     def custom_group_query(self, user: settings.AUTH_USER_MODEL) -> models.Q:
-        """Return a Q object that can be used to filter messages for the given user."""
+        """
+        Return a Q object that can be used to filter messages for the given user.
+
+        Custom groups are named predicates in settings.MESSAGE_CUSTOM_GROUPS,
+        and a message can only reference one that exists there - clean()
+        rejects any other value. So when that setting is empty or absent no
+        stored message can match, and evaluating the queryset below would
+        run a query that cannot return a row.
+
+        This matters because filter_user() calls this on every invocation,
+        and a project using this package for site-wide banners typically
+        calls filter_user() on every page render. Most projects never define
+        MESSAGE_CUSTOM_GROUPS at all, so the short-circuit is the common
+        path rather than an edge case.
+
+        """
+        if not custom_groups():
+            # An explicit empty match, not an empty Q(): an empty Q is a
+            # no-op when OR-ed (as filter_user does) but matches everything
+            # when AND-ed, and this method is public.
+            return models.Q(id__in=[])
         messages = (
             self.filter(
                 target=PersistentMessage.TargetType.USERS_OR_GROUPS,
@@ -216,7 +248,7 @@ class PersistentMessage(models.Model):
 
     def clean(self) -> None:
         if custom_group := self.target_custom_group:
-            if custom_group not in settings.MESSAGE_CUSTOM_GROUPS:
+            if custom_group not in custom_groups():
                 raise ValidationError(
                     _("Custom group not in settings.MESSAGE_CUSTOM_GROUPS")
                 )
@@ -307,7 +339,7 @@ class PersistentMessage(models.Model):
     def user_in_custom_group(self, user: settings.AUTH_USER_MODEL) -> bool:
         if not self.target_custom_group:
             return False
-        return settings.MESSAGE_CUSTOM_GROUPS[self.target_custom_group](user)
+        return custom_groups()[self.target_custom_group](user)
 
 
 class MessageDismissal(models.Model):

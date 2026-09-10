@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+- `custom_group_query` no longer runs a query when
+  `settings.MESSAGE_CUSTOM_GROUPS` is empty or undefined. `filter_user`
+  calls it on every invocation, so this halves the query cost of
+  rendering messages for every project that does not use custom groups —
+  which is any project that has not defined the setting.
+- `MESSAGE_CUSTOM_GROUPS` is now read through `models.custom_groups()`
+  with an empty default, so a project that has never defined it gets a
+  `ValidationError` from `clean()` for an unknown group rather than an
+  `AttributeError` from the settings lookup.
+
 ## v0.4
 
 - Add support for Django 5.2
